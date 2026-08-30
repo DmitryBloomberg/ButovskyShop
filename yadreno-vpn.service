@@ -1,12 +1,12 @@
 [Unit]
-Description=Butovsky VPN Bot
+Description=Yadreno VPN Bot
 After=network.target
 
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/root/Butovsky-Telegram-Bot
-ExecStart=/root/Butovsky-Telegram-Bot/venv/bin/python main.py
+WorkingDirectory=/root/YadrenoVPN
+ExecStart=/root/YadrenoVPN/venv/bin/python main.py
 Restart=always
 RestartSec=5
 
