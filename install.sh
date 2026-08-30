@@ -18,7 +18,7 @@
 
 set -e
 
-INSTALL_DIR="/root/YadrenoVPN"
+INSTALL_DIR="/root/Butovsky-Telegram-Bot"
 REPO_URL="https://github.com/plushkinv/YadrenoVPN.git"
 VENV_DIR="$INSTALL_DIR/venv"
 SERVICE_FILE="yadreno-vpn.service"

@@ -224,7 +224,7 @@ async def cmd_help(message: Message, state: FSMContext):
     await _render_help_page(message)
 
 
-@router.message(Command('id'))
+@router.message(Command('my_id'))
 async def cmd_id(message: Message):
     """Command handler /id - shows Telegram user ID."""
     await _render_show_id_page(message, force_new=True)
