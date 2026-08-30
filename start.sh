@@ -117,4 +117,35 @@ echo "=== Настройки успешно сохранены! ==="
 echo "Токен бота: $BOT_TOKEN"
 echo "ID администратора: $ADMIN_ID"
 echo ""
-echo "Теперь вы можете запустить бота командой: python main.py"
+
+# Проверяем, запущен ли бот как служба systemd
+if systemctl is-active --quiet yadreno-vpn 2>/dev/null; then
+    echo "Служба бота уже запущена. Перезапускаем для применения новых настроек..."
+    sudo systemctl restart yadreno-vpn
+else
+    echo "Запускаем службу бота (будет работать даже после закрытия сессии и перезагрузки)..."
+    sudo systemctl daemon-reload
+    sudo systemctl enable yadreno-vpn
+    sudo systemctl start yadreno-vpn
+fi
+
+# Проверяем статус службы
+if systemctl is-active --quiet yadreno-vpn 2>/dev/null; then
+    echo ""
+    echo "✅ Бот успешно запущен как системная служба!"
+    echo "   - Бот работает в фоновом режиме"
+    echo "   - Бот автоматически запустится при перезагрузке сервера"
+    echo "   - Бот продолжит работу после закрытия вашей SSH-сессии"
+    echo ""
+    echo "Полезные команды:"
+    echo "   sudo systemctl status yadreno-vpn  # Проверить статус"
+    echo "   sudo systemctl stop yadreno-vpn    # Остановить бота"
+    echo "   sudo systemctl restart yadreno-vpn # Перезапустить бота"
+    echo "   sudo journalctl -u yadreno-vpn -f  # Просмотр логов в реальном времени"
+else
+    echo ""
+    echo "⚠️ Не удалось запустить службу бота."
+    echo "Проверьте наличие файла службы yadreno-vpn.service и права доступа."
+    echo "Вы можете запустить бота вручную командой: python main.py"
+    echo "Но помните: при закрытии сессии бот остановится!"
+fi
