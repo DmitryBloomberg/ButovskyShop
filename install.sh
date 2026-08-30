@@ -18,8 +18,8 @@
 
 set -e
 
-INSTALL_DIR="/root/YadrenoVPN"
-REPO_URL="https://github.com/plushkinv/YadrenoVPN.git"
+INSTALL_DIR="/root/ButovskyShop"
+REPO_URL="https://github.com/DmitryBloomberg/ButovskyShop.git"
 VENV_DIR="$INSTALL_DIR/venv"
 SERVICE_FILE="yadreno-vpn.service"
 UPDATER_SERVICE_FILE="yadreno-vpn-updater@.service"
