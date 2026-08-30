@@ -1,120 +1,129 @@
 #!/bin/bash
+# Цвета для вывода
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # Без цвета
 
-# Скрипт для настройки токена бота и ID администратора
+echo -e "${GREEN}=== Скрипт настройки и запуска бота ===${NC}"
 
-CONFIG_FILE="config.py"
-
-# Проверяем, существует ли config.py, если нет — создаем из примера
-if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Файл $CONFIG_FILE не найден. Создаем из $CONFIG_FILE.example..."
-    if [ -f "$CONFIG_FILE.example" ]; then
-        cp "$CONFIG_FILE.example" "$CONFIG_FILE"
-        echo "Файл $CONFIG_FILE создан."
+# Проверка наличия config.py
+if [ ! -f "config.py" ]; then
+    echo -e "${YELLOW}Файл config.py не найден. Создаем из config.py.example...${NC}"
+    if [ -f "config.py.example" ]; then
+        cp config.py.example config.py
+        echo -e "${GREEN}Файл config.py создан.${NC}"
     else
-        echo "Ошибка: Файл $CONFIG_FILE.example не найден!"
+        echo -e "${RED}Ошибка: Файл config.py.example не найден!${NC}"
         exit 1
     fi
 fi
 
-echo "=== Настройка бота ==="
-echo ""
+# Функция для запроса токена
+get_bot_token() {
+    while true; do
+        read -p "Введите токен бота (получите у @BotFather): " token
+        if [[ -n "$token" ]]; then
+            echo "$token"
+            return
+        else
+            echo -e "${RED}Токен не может быть пустым. Попробуйте снова.${NC}"
+        fi
+    done
+}
 
-# Запрашиваем токен бота
-read -p "Введите токен бота (получите у @BotFather): " BOT_TOKEN
+# Функция для запроса ID админа
+get_admin_id() {
+    while true; do
+        read -p "Введите ваш Telegram ID администратора (число): " admin_id
+        if [[ "$admin_id" =~ ^[0-9]+$ ]]; then
+            echo "$admin_id"
+            return
+        else
+            echo -e "${RED}ID должен быть числом. Попробуйте снова.${NC}"
+        fi
+    done
+}
 
-if [ -z "$BOT_TOKEN" ]; then
-    echo "Ошибка: Токен бота не может быть пустым!"
-    exit 1
-fi
+echo -e "${GREEN}=== Настройка бота ===${NC}"
+BOT_TOKEN=$(get_bot_token)
+ADMIN_ID=$(get_admin_id)
 
-# Запрашиваем ID администратора
-read -p "Введите ваш Telegram ID администратора (число): " ADMIN_ID
+echo -e "${GREEN}Сохраняем настройки в config.py...${NC}"
 
-if [ -z "$ADMIN_ID" ]; then
-    echo "Ошибка: ID администратора не может быть пустым!"
-    exit 1
-fi
-
-# Проверяем, что ADMIN_ID — число
-if ! [[ "$ADMIN_ID" =~ ^[0-9]+$ ]]; then
-    echo "Ошибка: ID администратора должен быть числом!"
-    exit 1
-fi
-
-# Обновляем config.py с новыми значениями
-echo "Сохраняем настройки в $CONFIG_FILE..."
-
-# Создаем временный файл для записи
+# Обновляем config.py, заменяя значения заглушек
+# Используем временный файл для безопасности
 TEMP_FILE=$(mktemp)
 
-# Записываем заголовок и обязательные настройки
-cat > "$TEMP_FILE" << EOF
-import os
+# Заменяем BOT_TOKEN и ADMIN_ID, сохраняя остальное содержимое
+python3 -c "
+import re
+with open('config.py', 'r', encoding='utf-8') as f:
+    content = f.read()
+# Замена токена
+content = re.sub(r\"BOT_TOKEN\s*=\s*['\\\"].*?['\\\"]\", f\"BOT_TOKEN = '$BOT_TOKEN'\", content)
+# Замена ADMIN_ID
+content = re.sub(r\"ADMIN_ID\s*=\s*['\\\"]?\d+['\\\"]?\", f\"ADMIN_ID = $ADMIN_ID\", content)
+print(content)
+" > "$TEMP_FILE"
 
-# Telegram Bot API Token
-# Получите у @BotFather
-BOT_TOKEN = "$BOT_TOKEN"
+mv "$TEMP_FILE" config.py
 
-# Список Telegram ID администраторов бота
-ADMIN_IDS = [
-    $ADMIN_ID,  # Ваш ID
-]
+echo -e "\n${GREEN}=== Настройки успешно сохранены! ===${NC}"
+echo -e "Токен бота: ${YELLOW}$BOT_TOKEN${NC}"
+echo -e "ID администратора: ${YELLOW}$ADMIN_ID${NC}"
 
+# Установка прав на файл конфигурации (чтобы другие пользователи не читали токен)
+chmod 600 config.py
 
+echo -e "\n${GREEN}=== Установка и запуск службы systemd ===${NC}"
 
-################# Ниже необязательные настройки #################
+SERVICE_NAME="yadreno-vpn"
+SERVICE_FILE="${SERVICE_NAME}.service"
 
-# Адрес Telegram Bot API
-# Стандартный: https://api.telegram.org
-# Можно указать один кастомный адрес (прокси/зеркало), например: https://my-proxy.example.com
-TELEGRAM_API_URL = "https://api.telegram.org"
-#
-# Если нужно несколько адресов, укажите список. Бот начнет с первого адреса и
-# переключится на следующий только после сетевого сбоя текущего Telegram API:
-# TELEGRAM_API_URL = [
-#     "https://my-proxy-1.example.com",
-#     "https://my-proxy-2.example.com",
-#     "https://api.telegram.org",
-# ]
+# Проверяем наличие файла службы
+if [ ! -f "$SERVICE_FILE" ]; then
+    echo -e "${RED}Ошибка: Файл службы $SERVICE_FILE не найден в текущей директории!${NC}"
+    echo "Убедитесь, что вы находитесь в папке проекта и файл службы существует."
+    exit 1
+fi
 
-# Ссылка на GitHub репозиторий для автообновления
-# Формат: https://github.com/username/repo.git или git@github.com:username/repo.git
-GITHUB_REPO_URL = "https://github.com/plushkinv/YadrenoVPN.git"  # Укажите URL вашего репозитория
+# Копируем файл службы в систему
+echo "Копирование файла службы в /etc/systemd/system/..."
+sudo cp "$SERVICE_FILE" /etc/systemd/system/
 
-# Client Configuration Defaults
-DEFAULT_LIMIT_IP = 1  # Ограничение кол-ва одновременных подключений (1 ключ = 1 устройство)
-DEFAULT_TOTAL_GB = 1024 * 1024 * 1024 * 1024  # 1 TB в байтах (лимит трафика на ключ)
+# Перезагружаем демон systemd, чтобы он увидел новую службу
+echo "Обновление списка служб systemd..."
+sudo systemctl daemon-reload
 
-# Rate Limiting Configuration
-RATE_LIMITS = {
-    "commands_per_minute": 30,              # Максимум команд для обычных пользователей
-    "critical_operations_per_minute": 5,    # Лимит для критичных операций (платежи, создание ключей)
-}
+# Включаем службу для автозапуска при загрузке
+echo "Включение автозапуска службы..."
+sudo systemctl enable "$SERVICE_NAME"
 
-# Retry Configuration for API calls
-RETRY_CONFIG = {
-    "max_attempts": 3,      # Максимальное количество попыток
-    "delays": [1, 3, 9],    # Задержки между попытками в секундах (экспоненциальная)
-    "timeout_seconds": 15,  # Таймаут одной попытки обращения к VPN-панели
-}
+# Останавливаем службу, если она уже запущена (чтобы применить новый конфиг)
+echo "Остановка существующего процесса бота (если есть)..."
+sudo systemctl stop "$SERVICE_NAME" || true
 
-# SQLite Configuration
-# Эти параметры нужны владельцу проекта для тонкой настройки БД.
-# В админ-панели они не редактируются.
-SQLITE_JOURNAL_MODE = "WAL"          # WAL повышает устойчивость при одновременном чтении и записи
-SQLITE_SYNCHRONOUS = "NORMAL"        # Оптимальный режим для WAL: быстрее FULL, но без опасного OFF
-SQLITE_BUSY_TIMEOUT_MS = 10000       # Сколько ждать освобождения БД при временной блокировке
-SQLITE_CACHE_SIZE_KB = 32768         # Размер страничного кэша SQLite на подключение, в КБ
-SQLITE_TEMP_STORE = "MEMORY"         # Временные таблицы и сортировки хранить в памяти
-SQLITE_MMAP_SIZE_BYTES = 134217728   # Лимит memory-mapped I/O, 128 МБ
-EOF
+# Также убиваем возможные ручные процессы python main.py
+sudo pkill -f "python.*main.py" || true
 
-# Перемещаем временный файл в config.py
-mv "$TEMP_FILE" "$CONFIG_FILE"
+# Запускаем службу
+echo "Запуск службы бота..."
+sudo systemctl start "$SERVICE_NAME"
 
-echo ""
-echo "=== Настройки успешно сохранены! ==="
-echo "Токен бота: $BOT_TOKEN"
-echo "ID администратора: $ADMIN_ID"
-echo ""
-echo "Теперь вы можете запустить бота командой: python main.py"
+# Проверка статуса
+sleep 2
+if sudo systemctl is-active --quiet "$SERVICE_NAME"; then
+    echo -e "\n${GREEN}✅ Бот успешно запущен как служба ($SERVICE_NAME)!${NC}"
+    echo -e "Бот будет работать в фоне даже после закрытия терминала и перезагрузки сервера."
+    echo -e "\nПолезные команды:"
+    echo -e "  Просмотр логов: ${YELLOW}sudo journalctl -u $SERVICE_NAME -f${NC}"
+    echo -e "  Остановка бота: ${YELLOW}sudo systemctl stop $SERVICE_NAME${NC}"
+    echo -e "  Перезапуск бота: ${YELLOW}sudo systemctl restart $SERVICE_NAME${NC}"
+    echo -e "  Статус службы: ${YELLOW}sudo systemctl status $SERVICE_NAME${NC}"
+else
+    echo -e "\n${RED}❌ Ошибка при запуске службы!${NC}"
+    echo "Проверьте логи для диагностики:"
+    sudo systemctl status "$SERVICE_NAME" --no-pager
+    exit 1
+fi
