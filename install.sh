@@ -1,15 +1,15 @@
 #!/bin/bash
 
-# Yadreno VPN — скрипт установки и управления
-# Запуск: bash <(curl -sL https://raw.githubusercontent.com/plushkinv/YadrenoVPN/main/install.sh)
+# Butovsky Telegram Bot — скрипт установки и управления
+# Запуск: bash <(curl -fsSL https://raw.githubusercontent.com/DmitryBloomberg/Butovsky-Telegram-Bot/main/install.sh)
 # 
 # === АВТОМАТИЧЕСКИЙ ЗАПУСК (БЕЗ ДИАЛОГОВ) ===
 #
 # 1. Запуск прямо с GitHub (для чистой установки или если папки ещё нет):
-# bash <(curl -sL https://raw.githubusercontent.com/plushkinv/YadrenoVPN/main/install.sh) install <BOT_TOKEN> <ADMIN_ID>
-# bash <(curl -sL https://raw.githubusercontent.com/plushkinv/YadrenoVPN/main/install.sh) update [COMMIT_OR_BRANCH]
-# bash <(curl -sL https://raw.githubusercontent.com/plushkinv/YadrenoVPN/main/install.sh) reset [COMMIT_OR_BRANCH]
-# bash <(curl -sL https://raw.githubusercontent.com/plushkinv/YadrenoVPN/main/install.sh) rollback
+# bash <(curl -fsSL https://raw.githubusercontent.com/DmitryBloomberg/Butovsky-Telegram-Bot/main/install.sh) install <BOT_TOKEN> <ADMIN_ID>
+# bash <(curl -fsSL https://raw.githubusercontent.com/DmitryBloomberg/Butovsky-Telegram-Bot/main/install.sh) update [COMMIT_OR_BRANCH]
+# bash <(curl -fsSL https://raw.githubusercontent.com/DmitryBloomberg/Butovsky-Telegram-Bot/main/install.sh) reset [COMMIT_OR_BRANCH]
+# bash <(curl -fsSL https://raw.githubusercontent.com/DmitryBloomberg/Butovsky-Telegram-Bot/main/install.sh) rollback
 #
 # 2. Локальный запуск (если репозиторий уже установлен и нужно просто обновить/сбросить):
 # bash install.sh update [COMMIT_OR_BRANCH]
@@ -19,11 +19,34 @@
 set -e
 
 INSTALL_DIR="/root/Butovsky-Telegram-Bot"
-REPO_URL="https://github.com/plushkinv/YadrenoVPN.git"
+REPO_URL="https://github.com/DmitryBloomberg/Butovsky-Telegram-Bot.git"
 VENV_DIR="$INSTALL_DIR/venv"
 SERVICE_FILE="yadreno-vpn.service"
 UPDATER_SERVICE_FILE="yadreno-vpn-updater@.service"
 DB_PATH="$INSTALL_DIR/database/vpn_bot.db"
+
+validate_project_layout() {
+    print_header "Проверка структуры проекта"
+
+    local required_path
+    local required_paths=(
+        "$INSTALL_DIR/main.py"
+        "$INSTALL_DIR/requirements.txt"
+        "$INSTALL_DIR/config.py.example"
+        "$INSTALL_DIR/bot"
+        "$INSTALL_DIR/database"
+    )
+
+    for required_path in "${required_paths[@]}"; do
+        if [ ! -e "$required_path" ]; then
+            print_err "Не найден обязательный путь: $required_path"
+            return 1
+        fi
+    done
+
+    mkdir -p "$INSTALL_DIR/logs" "$INSTALL_DIR/backup"
+    print_ok "Структура проекта корректна: $INSTALL_DIR"
+}
 
 # Цвета для вывода
 RED='\033[0;31m'
@@ -216,7 +239,7 @@ setup_systemd() {
 
     if ! cat > "/etc/systemd/system/$SERVICE_FILE" << EOF
 [Unit]
-Description=Yadreno VPN Bot
+Description=Butovsky Telegram Bot
 After=network.target
 
 [Service]
@@ -254,7 +277,7 @@ EOF
         local updater_unit_error=""
         if ! cat > "$updater_unit_candidate" << EOF
 [Unit]
-Description=Yadreno VPN managed updater for snapshot %i
+Description=Butovsky Telegram Bot managed updater for snapshot %i
 Wants=network-online.target
 After=network-online.target
 
@@ -313,11 +336,11 @@ start_service() {
 # ПУНКТ 1: УСТАНОВКА
 # ============================================================
 do_install() {
-    print_header "🚀 Установка Yadreno VPN"
+    print_header "🚀 Установка Butovsky Telegram Bot"
 
     # Проверяем, не установлен ли уже
     if [ -d "$INSTALL_DIR" ] && [ -d "$INSTALL_DIR/.git" ]; then
-        print_warn "Yadreno VPN уже установлен в $INSTALL_DIR"
+        print_warn "Butovsky Telegram Bot уже установлен в $INSTALL_DIR"
         if [ "$AUTO_MODE" = "1" ]; then
             print_warn "Автоматический режим: принудительная переустановка"
             reinstall_choice="1"
@@ -352,12 +375,13 @@ do_install() {
     install_system_deps
 
     # Клонирование репозитория
-    print_header "Загрузка Yadreno VPN"
+    print_header "Загрузка Butovsky Telegram Bot"
     git clone "$REPO_URL" "$INSTALL_DIR" -q
     cd "$INSTALL_DIR"
     print_ok "Репозиторий клонирован"
 
     # Запись config.py
+    validate_project_layout
     write_config
 
     # Виртуальное окружение и зависимости
@@ -387,7 +411,7 @@ do_soft_update() {
     print_header "🔄 Мягкое обновление"
 
     if [ ! -d "$INSTALL_DIR/.git" ]; then
-        print_err "Yadreno VPN не установлен в $INSTALL_DIR"
+        print_err "Butovsky Telegram Bot не установлен в $INSTALL_DIR"
         return 1
     fi
 
@@ -454,7 +478,7 @@ do_hard_reset() {
     print_header "⚠️  Жёсткая перезапись"
 
     if [ ! -d "$INSTALL_DIR/.git" ]; then
-        print_err "Yadreno VPN не установлен в $INSTALL_DIR"
+        print_err "Butovsky Telegram Bot не установлен в $INSTALL_DIR"
         return 1
     fi
 
@@ -580,7 +604,7 @@ do_rollback() {
     print_header "↩️ Откат обновления"
 
     if [ ! -d "$INSTALL_DIR/.git" ]; then
-        print_err "Yadreno VPN не установлен в $INSTALL_DIR"
+        print_err "Butovsky Telegram Bot не установлен в $INSTALL_DIR"
         return 1
     fi
     cd "$INSTALL_DIR"
@@ -620,7 +644,7 @@ show_menu() {
     clear
     echo -e "${CYAN}"
     echo "  ╔═══════════════════════════════════════╗"
-    echo "  ║       🌐 Yadreno VPN Manager         ║"
+    echo "  ║     🌐 Butovsky Bot Manager         ║"
     echo "  ╚═══════════════════════════════════════╝"
     echo -e "${NC}"
     echo "  1) 🚀 Установка"
